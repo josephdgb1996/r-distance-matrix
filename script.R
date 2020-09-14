@@ -6,8 +6,11 @@ if (!require("manhattanly")) install.packages("manhattanly")
 if (!require("h2o")) install.packages("h2o")
 if (!require("cluster")) install.packages("cluster")
 if (!require("dplyr")) install.packages("dplyr")
+if (!require("philentropy")) install.packages("philentropy")
+
 
 library("qqman")
+library("philentropy")
 library("h2o")
 library("plotly")
 library("manhattanly")
@@ -142,7 +145,7 @@ server <- function(input, output, session) {
     }
   })
   
-  distance <- reactive({
+  distance_matrix <- reactive({
     choice <- input$choice
     
     if(choice == "Euclideana"){
@@ -150,7 +153,7 @@ server <- function(input, output, session) {
     }else if(choice == "Manhattan"){
       return(dist(dataset(), method = "manhattan"))
     }else {
-      return(cor(select(dataset(), -1)))
+      return(distance(select(dataset(),-1),method = "pearson"))
     }
   })
   # ================
@@ -208,12 +211,11 @@ server <- function(input, output, session) {
       output$plot <- renderPlot({
         if(is_distance_matrix == TRUE){
           print("ES DISTANCIA MATRIX")
-          hc = hclust( as.dist(as(distance(), "matrix")))
+          hc = hclust( as.dist(as(distance_matrix(), "matrix")))
           plot(hc)
         }else {
           print("NO ES DISTANCIA MATRIX")
-          print(distance())
-          hc <- hclust(distance(), method="ward.D")
+          hc <- hclust(distance_matrix(), method="ward.D")
           plot(hc)
         }
       })
@@ -221,10 +223,10 @@ server <- function(input, output, session) {
       print("GRAFICAR MANHATTAN")
       output$plot <- renderPlot({
         if(is_distance_matrix == TRUE){
-          hc = hclust( as.dist(as(distance(), "matrix")))
+          hc = hclust( as.dist(as(distance_matrix(), "matrix")))
           plot(hc)
         }else {
-          hc <- hclust(distance(), method="ward.D")
+          hc <- hclust(distance_matrix(), method="ward.D")
           plot(hc)
         }
       })
@@ -236,7 +238,6 @@ server <- function(input, output, session) {
           corrplot(correlation, method = "circle")
         }else {
           correlation <- cor(select(dataset(), -1))
-          print(correlation)
           corrplot(correlation, method = "circle")
         }
       })
@@ -252,7 +253,8 @@ server <- function(input, output, session) {
     },
     
     content = function(file) {
-      df <-as.data.frame(as.matrix(distance()))
+      print(distance)
+      df <-as.data.frame(as.matrix(distance_matrix()))
       write.csv(df, file)
     }
   )
@@ -264,5 +266,3 @@ server <- function(input, output, session) {
 # ================================================================================================================================================
 
 shinyApp(ui = ui, server = server)
-
-
